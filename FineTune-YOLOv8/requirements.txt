@@ -1,0 +1,9 @@
+ultralytics==8.1.25
+Pillow>=9.0.0
+torch>=1.13.0
+torchvision>=0.14.0
+numpy
+opencv-python
+matplotlib
+PyYAML
+drive

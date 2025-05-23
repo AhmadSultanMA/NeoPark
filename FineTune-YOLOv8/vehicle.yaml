@@ -1,0 +1,6 @@
+train: /content/drive/MyDrive/dataset/to/train/images
+val: /content/drive/MyDrive/dataset/to/val/images
+test: /content/drive/MyDrive/dataset/to/test/images
+
+nc: 1
+names:["car"]

@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Parking System</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 10px;
+        color: #333;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 15px;
+        color: white;
+      }
+
+      h1 {
+        font-size: 42px;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .subtitle {
+        font-size: 18px;
+        opacity: 0.9;
+      }
+
+      .main-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .video-section {
+        background: white;
+        border-radius: 20px;
+        padding: 10px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .video-container {
+        position: relative;
+        margin-bottom: 20px;
+      }
+
+      .video-feed {
+        width: 100%;
+        height: 400px;
+        border-radius: 15px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        border: 3px solid #f0f0f0;
+      }
+
+      .area-selector {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        justify-content: center;
+      }
+
+      .area-btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 20px;
+        background: rgba(102, 126, 234, 0.2);
+        color: #667eea;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid #667eea;
+      }
+
+      .area-btn.active {
+        background: #667eea;
+        color: white;
+      }
+
+      .parking-section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 10px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+      }
+
+      .parking-name {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .info-container {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 5px;
+      }
+
+      .info-item {
+        text-align: center;
+      }
+
+      .info-label {
+        font-size: 14px;
+        color: #7f8c8d;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .count {
+        font-size: 36px;
+        font-weight: bold;
+        margin: 10px 0;
+      }
+
+      .available {
+        color: #27ae60;
+      }
+
+      .occupied {
+        color: #e74c3c;
+      }
+
+      .capacity {
+        text-align: center;
+        font-size: 16px;
+        color: #7f8c8d;
+        margin-bottom: 20px;
+      }
+
+      .progress-bar {
+        height: 12px;
+        background: linear-gradient(90deg, #ecf0f1, #bdc3c7);
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .progress {
+        height: 100%;
+        border-radius: 6px;
+        transition: all 0.5s ease;
+        background: linear-gradient(90deg, #27ae60, #2ecc71);
+      }
+
+      .status-indicator {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #27ae60;
+        animation: pulse 2s infinite;
+      }
+
+      .status-indicator.offline {
+        background: #e74c3c;
+        animation: none;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .last-updated {
+        text-align: center;
+        margin-top: 10px;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 14px;
+        background: rgba(0, 0, 0, 0.1);
+        padding: 10px 20px;
+        border-radius: 25px;
+        backdrop-filter: blur(10px);
+      }
+
+      .video-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 15px;
+        text-align: center;
+      }
+
+      .connection-status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 10px;
+        font-size: 14px;
+        color: #7f8c8d;
+      }
+
+      .summary-card {
+        background: white;
+        color: black;
+      }
+
+      .summary-stats {
+        display: flex;
+        justify-content: space-around;
+        text-align: center;
+      }
+
+      .summary-item h3 {
+        font-size: 28px;
+        margin-bottom: 5px;
+      }
+
+      .summary-item p {
+        font-size: 14px;
+        opacity: 0.9;
+      }
+
+      @media (max-width: 1024px) {
+        .main-container {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 32px;
+        }
+
+        .card {
+          padding: 10px;
+        }
+
+        .count {
+          font-size: 28px;
+        }
+
+        .area-selector {
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .area-btn {
+          width: 100%;
+          max-width: 200px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🚗 NEOPARK</h1>
+      <!-- <div class="subtitle">Real-time monitoring with AI-powered detection</div> -->
+    </div>
+
+    <div class="main-container">
+      <!-- Video Feed Section -->
+      <div class="video-section">
+        <div class="video-title">📹 Live Camera Feed with Detection</div>
+
+        <!-- Area Selector -->
+        <div class="area-selector">
+          <button
+            class="area-btn active"
+            id="area-a1-btn"
+            onclick="switchArea('A1')"
+          >
+            🅰️ Area A1
+          </button>
+          <button class="area-btn" id="area-a2-btn" onclick="switchArea('A2')">
+            🅱️ Area A2
+          </button>
+        </div>
+
+        <div class="video-container">
+          <div class="status-indicator" id="camera-status"></div>
+          <img
+            id="video-feed"
+            class="video-feed"
+            src=""
+            alt="Loading camera feed..."
+          />
+        </div>
+
+        <div class="connection-status">
+          <span id="connection-indicator">●</span>
+          <span id="connection-text">Connecting to camera...</span>
+        </div>
+      </div>
+
+      <!-- Parking Info Section -->
+      <div class="parking-section">
+        <!-- Summary Card -->
+        <div class="card summary-card">
+          <div class="parking-name">📊 Total Parking Summary</div>
+          <div class="summary-stats">
+            <div class="summary-item">
+              <h3 id="total-available">-</h3>
+              <p>Available Slots</p>
+            </div>
+            <div class="summary-item">
+              <h3 id="total-occupied">-</h3>
+              <p>Occupied Slots</p>
+            </div>
+            <div class="summary-item">
+              <h3 id="total-capacity">8</h3>
+              <p>Total Capacity</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Area A1 Card -->
+        <div class="card">
+          <div class="status-indicator" id="a1-status"></div>
+          <div class="parking-name">🅰️ Parking Area A1</div>
+          <div class="info-container">
+            <div class="info-item">
+              <div class="info-label">Available</div>
+              <div id="a1-available" class="count available">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Occupied</div>
+              <div id="a1-occupied" class="count occupied">-</div>
+            </div>
+          </div>
+          <div class="capacity">
+            Total capacity: <span id="a1-capacity">4</span> slots
+          </div>
+          <div class="progress-bar">
+            <div id="a1-progress" class="progress" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Area A2 Card -->
+        <div class="card">
+          <div class="status-indicator" id="a2-status"></div>
+          <div class="parking-name">🅱️ Parking Area A2</div>
+          <div class="info-container">
+            <div class="info-item">
+              <div class="info-label">Available</div>
+              <div id="a2-available" class="count available">-</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Occupied</div>
+              <div id="a2-occupied" class="count occupied">-</div>
+            </div>
+          </div>
+          <div class="capacity">
+            Total capacity: <span id="a2-capacity">4</span> slots
+          </div>
+          <div class="progress-bar">
+            <div id="a2-progress" class="progress" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="last-updated">
+      🕒 Last updated: <span id="timestamp">-</span>
+    </div>
+
+    <script>
+      const MAX_SLOT = 4;
+      const TOTAL_CAPACITY = MAX_SLOT * 2; // A1 + A2
+      let currentArea = "A1";
+
+      // Updated server URL for combined server
+      const SERVER_BASE_URL = "http://127.0.0.1:5000";
+
+      // Area switching function
+      function switchArea(area) {
+        currentArea = area;
+        const btnA1 = document.getElementById("area-a1-btn");
+        const btnA2 = document.getElementById("area-a2-btn");
+
+        if (area === "A1") {
+          btnA1.classList.add("active");
+          btnA2.classList.remove("active");
+        } else {
+          btnA2.classList.add("active");
+          btnA1.classList.remove("active");
+        }
+
+        // Update video feed for current area
+        updateVideoFeed();
+      }
+
+      // Update video feed based on current area
+      function updateVideoFeed() {
+        const videoFeed = document.getElementById("video-feed");
+        const areaPath = currentArea.toLowerCase();
+
+        videoFeed.src = `${SERVER_BASE_URL}/${areaPath}/video_feed?${new Date().getTime()}`;
+      }
+
+      // Connection status management
+      function updateConnectionStatus(isConnected) {
+        const indicator = document.getElementById("connection-indicator");
+        const text = document.getElementById("connection-text");
+        const cameraStatus = document.getElementById("camera-status");
+
+        if (isConnected) {
+          indicator.style.color = "#27ae60";
+          text.textContent = `Area ${currentArea} camera connected`;
+          cameraStatus.classList.remove("offline");
+        } else {
+          indicator.style.color = "#e74c3c";
+          text.textContent = `Area ${currentArea} camera disconnected`;
+          cameraStatus.classList.add("offline");
+        }
+      }
+
+      // Check camera connection for current area
+      function checkCameraConnection() {
+        const img = new Image();
+        img.onload = () => updateConnectionStatus(true);
+        img.onerror = () => updateConnectionStatus(false);
+
+        const areaPath = currentArea.toLowerCase();
+        img.src = `${SERVER_BASE_URL}/${areaPath}/video_feed?${new Date().getTime()}`;
+      }
+
+      // Get car count from area-specific endpoint
+      async function getCarCount(area) {
+        try {
+          const areaPath = area.toLowerCase();
+          const url = `${SERVER_BASE_URL}/${areaPath}/get_detections`;
+
+          const res = await fetch(url);
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+
+          const data = await res.json();
+          console.log(`Response from Area ${area}:`, data);
+
+          if (
+            data &&
+            data.object_counts &&
+            typeof data.object_counts.car === "number"
+          ) {
+            return {
+              count: data.object_counts.car,
+              connected: data.connection_status !== false,
+            };
+          } else if (data && data.status === "No detections yet") {
+            return {
+              count: 0,
+              connected: data.connection_status !== false,
+            };
+          } else {
+            console.warn("Unexpected response format:", data);
+            return { count: 0, connected: false };
+          }
+        } catch (err) {
+          console.error(`Error fetching data from Area ${area}:`, err);
+          return { count: 0, connected: false };
+        }
+      }
+
+      // Get combined data from server
+      async function getCombinedData() {
+        try {
+          const url = `${SERVER_BASE_URL}/combined/get_detections`;
+          const res = await fetch(url);
+
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+
+          const data = await res.json();
+          console.log("Combined data:", data);
+
+          return {
+            totalCars: data.total_cars || 0,
+            a1: {
+              count: data.area_a1?.car_count || 0,
+              connected: data.area_a1?.connection_status !== false,
+            },
+            a2: {
+              count: data.area_a2?.car_count || 0,
+              connected: data.area_a2?.connection_status !== false,
+            },
+          };
+        } catch (err) {
+          console.error("Error fetching combined data:", err);
+          return null;
+        }
+      }
+
+      function formatTime(date) {
+        return date.toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+      }
+
+      function updateProgressBar(elementId, occupiedCount, maxSlots) {
+        const percentOccupied = (occupiedCount / maxSlots) * 100;
+        const element = document.getElementById(elementId);
+        element.style.width = percentOccupied + "%";
+
+        if (percentOccupied > 75) {
+          element.style.background = "linear-gradient(90deg, #e74c3c, #c0392b)";
+        } else if (percentOccupied > 50) {
+          element.style.background = "linear-gradient(90deg, #f39c12, #e67e22)";
+        } else {
+          element.style.background = "linear-gradient(90deg, #27ae60, #2ecc71)";
+        }
+      }
+
+      function updateStatus(elementId, isOnline) {
+        const element = document.getElementById(elementId);
+        if (isOnline) {
+          element.classList.remove("offline");
+        } else {
+          element.classList.add("offline");
+        }
+      }
+
+      // Updated function to handle parking info using combined endpoint
+      async function updateParkingInfo() {
+        try {
+          // Try to get combined data first
+          const combinedData = await getCombinedData();
+
+          if (combinedData) {
+            // Update A1
+            const availableA1 = Math.max(0, MAX_SLOT - combinedData.a1.count);
+            document.getElementById("a1-available").textContent = availableA1;
+            document.getElementById("a1-occupied").textContent =
+              combinedData.a1.count;
+            updateProgressBar("a1-progress", combinedData.a1.count, MAX_SLOT);
+            updateStatus("a1-status", combinedData.a1.connected);
+
+            // Update A2
+            const availableA2 = Math.max(0, MAX_SLOT - combinedData.a2.count);
+            document.getElementById("a2-available").textContent = availableA2;
+            document.getElementById("a2-occupied").textContent =
+              combinedData.a2.count;
+            updateProgressBar("a2-progress", combinedData.a2.count, MAX_SLOT);
+            updateStatus("a2-status", combinedData.a2.connected);
+
+            // Update summary
+            const totalOccupied = combinedData.a1.count + combinedData.a2.count;
+            const totalAvailable = TOTAL_CAPACITY - totalOccupied;
+
+            document.getElementById("total-available").textContent =
+              totalAvailable;
+            document.getElementById("total-occupied").textContent =
+              totalOccupied;
+
+            console.log(
+              `Total: ${totalOccupied} occupied, ${totalAvailable} available`
+            );
+          } else {
+            // Fallback to individual endpoints
+            const [dataA1, dataA2] = await Promise.all([
+              getCarCount("A1"),
+              getCarCount("A2"),
+            ]);
+
+            // Update A1
+            const availableA1 = Math.max(0, MAX_SLOT - dataA1.count);
+            document.getElementById("a1-available").textContent = availableA1;
+            document.getElementById("a1-occupied").textContent = dataA1.count;
+            updateProgressBar("a1-progress", dataA1.count, MAX_SLOT);
+            updateStatus("a1-status", dataA1.connected);
+
+            // Update A2
+            const availableA2 = Math.max(0, MAX_SLOT - dataA2.count);
+            document.getElementById("a2-available").textContent = availableA2;
+            document.getElementById("a2-occupied").textContent = dataA2.count;
+            updateProgressBar("a2-progress", dataA2.count, MAX_SLOT);
+            updateStatus("a2-status", dataA2.connected);
+
+            // Update summary
+            const totalOccupied = dataA1.count + dataA2.count;
+            const totalAvailable = TOTAL_CAPACITY - totalOccupied;
+
+            document.getElementById("total-available").textContent =
+              totalAvailable;
+            document.getElementById("total-occupied").textContent =
+              totalOccupied;
+          }
+        } catch (err) {
+          console.error("Error updating parking info:", err);
+
+          // Set error state
+          ["a1", "a2"].forEach((area) => {
+            document.getElementById(`${area}-available`).textContent = "-";
+            document.getElementById(`${area}-occupied`).textContent = "-";
+            updateStatus(`${area}-status`, false);
+          });
+
+          document.getElementById("total-available").textContent = "-";
+          document.getElementById("total-occupied").textContent = "-";
+        }
+
+        // Update timestamp
+        document.getElementById("timestamp").textContent = formatTime(
+          new Date()
+        );
+      }
+
+      // Initialize everything
+      function init() {
+        console.log("Initializing Smart Parking System...");
+
+        // Set initial states
+        switchArea("A1");
+
+        // Initial data load
+        updateParkingInfo();
+        checkCameraConnection();
+
+        // Set up intervals
+        setInterval(updateParkingInfo, 2000); // Every 2 seconds
+        setInterval(checkCameraConnection, 5000); // Every 5 seconds
+
+        console.log("Smart Parking System initialized successfully!");
+      }
+
+      // Handle video feed errors
+      document
+        .getElementById("video-feed")
+        .addEventListener("error", function () {
+          updateConnectionStatus(false);
+        });
+
+      document
+        .getElementById("video-feed")
+        .addEventListener("load", function () {
+          updateConnectionStatus(true);
+        });
+
+      // Start when page loads
+      window.addEventListener("load", init);
+    </script>
+  </body>
+</html>
