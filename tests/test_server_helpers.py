@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import (
     MagicMock,
-)  # 'patch' dihilangkan karena tidak dipakai di file ini
+)
 from datetime import datetime, timedelta
 from PIL import Image
 import io
@@ -57,7 +57,7 @@ def test_get_status_data_connected(clean_areas_data_fixture):
     assert status["last_frame_time"] is not None
 
 
-def test_get_status_data_timeout_updates_status(clean_areas_data_fixture):
+def test_get_status_data_timeout_updates_status(app_instance, clean_areas_data_fixture):
     areas_data["A1"].update(
         {
             "last_frame_time": datetime.now() - timedelta(seconds=20),  # Timeout
@@ -65,14 +65,13 @@ def test_get_status_data_timeout_updates_status(clean_areas_data_fixture):
             "connection_status": True,  # Awalnya True
         }
     )
-    # Panggil fungsi endpoint yang memiliki side-effect mengubah status
-    # jika timeout pada areas_data (logika ini ada di get_status_for_area)
-    _ = get_status_for_area("A1")
-    status_after_call = get_status_data("A1")  # Ambil status bersih setelahnya
-    assert status_after_call["connection_status"] is False  # Harusnya sudah False
+
+    with app_instance.app_context():
+        _ = get_status_for_area("A1")
+    status_after_call = get_status_data("A1")
+    assert status_after_call["connection_status"] is False
 
 
-# --- Tes untuk get_area_detection_data ---
 def test_get_area_detection_data_no_detections(clean_areas_data_fixture):
     result = get_area_detection_data("A1")
     assert result["car_count"] == 0
@@ -131,18 +130,30 @@ def test_process_image_for_area_with_sample_image(
     assert hasattr(
         app_instance, "mock_yolo_instance"
     ), "Mock YOLO instance tidak ditemukan di app_instance. Periksa conftest.py"
-    mock_model = app_instance.mock_yolo_instance
+    mock_model = (
+        app_instance.mock_yolo_instance
+    )  # Pastikan ini adalah MOCK_YOLO_INSTANCE_FOR_TESTS dari conftest
 
     # Konfigurasi output dari mock_model
     mock_result_box = MagicMock()
-    mock_result_box.xyxy = [[10, 20, 30, 40]]  # Koordinat bounding box
-    mock_result_box.conf = [0.95]  # Confidence score
-    mock_result_box.cls = [0]  # Misal 0 adalah 'car'
+
+    mock_first_box_coords_tensor_like = MagicMock()
+    mock_first_box_coords_tensor_like.tolist.return_value = [
+        10.0,
+        20.0,
+        30.0,
+        40.0,
+    ]  # Ini hasil dari .tolist()
+
+    mock_result_box.xyxy = [mock_first_box_coords_tensor_like]
+
+    mock_result_box.conf = [0.95]
+    mock_result_box.cls = [0]
 
     mock_yolo_result = MagicMock()
-    mock_yolo_result.boxes = [mock_result_box]  # Satu deteksi
-    mock_model.return_value = [mock_yolo_result]  # model(img) akan mengembalikan ini
-    mock_model.names = {0: "car"}  # Mapping class ID ke nama class
+    mock_yolo_result.boxes = [mock_result_box]
+    mock_model.return_value = [mock_yolo_result]
+    mock_model.names = {0: "car"}
 
     # Memuat gambar dari file sampel
     test_dir = os.path.dirname(os.path.abspath(__file__))
