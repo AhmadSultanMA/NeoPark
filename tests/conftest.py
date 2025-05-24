@@ -13,14 +13,8 @@ _flask_app = None
 def get_flask_app():
     global _flask_app
     if _flask_app is None:
-        # Mock YOLO sebelum 'neopark_server' diimpor pertama kali
-        # Ini penting jika YOLO diinisialisasi secara global di neopark_server.py
         mock_yolo_instance = MagicMock()
-        # Anda bisa mengatur perilaku mock_yolo_instance di sini jika perlu
-        # Misalnya: mock_yolo_instance.return_value = [MagicMock(boxes=...)]
 
-        # Patch class YOLO di modul ultralytics yang mungkin diimpor oleh neopark_server
-        # Atau patch langsung di 'neopark_server.YOLO' jika itu cara pemanggilannya
         with patch('ultralytics.YOLO', return_value=mock_yolo_instance) as mock_yolo_class_ultralytics, \
              patch('neopark_server.YOLO', return_value=mock_yolo_instance, create=True) as mock_yolo_class_server:
             # 'create=True' untuk neopark_server.YOLO jika YOLO diimpor dan diassign di sana
@@ -103,8 +97,3 @@ def clean_areas_data(app_instance):
         # Jangan reset 'frame_lock' karena itu objek threading.Lock
 
     yield areas_data # Berikan areas_data yang bersih ke tes
-
-    # Kembalikan ke state original setelah tes (opsional, tapi baik untuk isolasi)
-    # Namun, karena ini global, lebih aman meresetnya di awal setiap tes.
-    # Jika ada tes yang berjalan paralel, ini bisa jadi masalah.
-    # Untuk sekarang, kita reset di awal.

@@ -123,11 +123,7 @@ def test_video_feed_area(mock_generate_frames, client, area_id_param, clean_area
     assert response.status_code == 200
     assert response.mimetype == 'multipart/x-mixed-replace'
     
-    # Untuk memeriksa isi stream lebih lanjut itu kompleks,
-    # Cukup pastikan generator dipanggil dan mimetype benar sudah cukup untuk awal
     mock_generate_frames.assert_called_once_with(area_id_param)
-
-# Anda bisa membuat tes serupa untuk /raw_feed dengan mem-patch generate_raw_frames_for_area
 
 # --- Tes untuk /metrics endpoint ---
 def test_metrics_endpoint_more_details(client, clean_areas_data):

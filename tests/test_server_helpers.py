@@ -52,9 +52,6 @@ def test_get_status_data_connected(clean_areas_data):
     assert status['last_frame_time'] is not None
 
 def test_get_status_data_timeout_updates_status(clean_areas_data):
-    # Fungsi get_status_data itu sendiri tidak mengubah status,
-    # tapi fungsi get_detections_for_area atau get_status_for_area (endpoint) yang mengubahnya.
-    # Jadi kita tes state internal setelah dipanggil.
     areas_data["A1"].update({
         'last_frame_time': datetime.now() - timedelta(seconds=20), # Timeout
         'latest_frame': b'some_frame_data',
@@ -96,15 +93,9 @@ def test_get_area_detection_data_with_mixed_confidence(clean_areas_data):
     assert result["connection_status"] is True
 
 
-# --- Tes untuk process_image_for_area (bagian inti, perlu mock model) ---
-# Di conftest, kita sudah mock YOLO class, jadi model = YOLO() akan mengembalikan mock_yolo_instance
 def test_process_image_for_area_basic_flow(app_instance, clean_areas_data):
-    # app_instance di sini untuk memastikan mock YOLO dari conftest aktif
-    # dan kita bisa akses mock-nya jika perlu.
     mock_model = get_flask_app.mock_yolo_instance # Ambil instance mock model dari conftest
 
-    # Siapkan return value untuk mock_model(image_pil)
-    # Ini adalah list dari Result object (atau mock yang berperilaku seperti itu)
     mock_result_box = MagicMock()
     mock_result_box.xyxy = [[10, 20, 30, 40]] # Koordinat bounding box
     mock_result_box.conf = [0.95] # Confidence score
@@ -114,8 +105,7 @@ def test_process_image_for_area_basic_flow(app_instance, clean_areas_data):
     mock_yolo_result.boxes = [mock_result_box] # Satu deteksi
     mock_model.return_value = [mock_yolo_result] # model(img) akan mengembalikan list ini
 
-    # Siapkan nama kelas untuk model mock (sesuai dengan cls ID di atas)
-    mock_model.names = {0: 'car', 1: 'person'}
+    mock_model.names = {0: 'car'}
 
     # Buat gambar dummy JPEG
     dummy_jpeg_bytes = create_placeholder_image("dummy_for_processing")
