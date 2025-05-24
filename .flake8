@@ -1,19 +1,7 @@
 # .flake8
 [flake8]
-# Maksimum panjang baris (banyak yang pakai 88 (black), 99, atau 119/120)
 max-line-length = 99
-# Variabel atau import yang tidak terpakai akan dianggap error
-# E999 adalah syntax error, F821 undefined name
-# Defaultnya flake8 sudah cukup baik, tapi ini bisa untuk override
-# select = E,F,W,C
-
-# Abaikan error/warning tertentu. Sesuaikan dengan kebutuhan dan preferensi tim.
-# E203: whitespace before ':' (sering konflik dengan formatter Black)
-# W503: line break before binary operator (PEP8 menyarankan setelah, tapi W504 (after) lebih baru dan kadang konflik)
-#       Jika menggunakan Black, biasanya tidak perlu khawatir tentang W503/W504.
 extend-ignore = E203, W503
-
-# Direktori yang akan diabaikan oleh flake8
 exclude =
     .git,
     __pycache__,
@@ -29,6 +17,5 @@ exclude =
     .tox,
     .vscode
 
-# Per-file ignores (contoh: abaikan 'unused import' di file __init__.py)
 per-file-ignores =
     */__init__.py: F401, F403
