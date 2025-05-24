@@ -1,0 +1,13 @@
+Flask==2.3.3
+ultralytics==8.0.196
+Pillow==10.0.0
+opencv-python-headless==4.8.1.78
+numpy==1.24.3
+torch==2.0.1
+torchvision==0.15.2
+PyYAML==6.0.1
+requests==2.31.0
+matplotlib==3.7.2
+seaborn==0.12.2
+pandas==2.0.3
+scipy==1.11.2

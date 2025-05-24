@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  neopark-server:
+    build: .
+    container_name: neopark-parking-system
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./Server:/app/server
+      - ./Website:/app/static
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/combined/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - neopark-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: neopark-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./static:/usr/share/nginx/html/static
+    depends_on:
+      - neopark-server
+    restart: unless-stopped
+    networks:
+      - neopark-network
+
+networks:
+  neopark-network:
+    driver: bridge
+
+volumes:
+  logs:
+  data:
