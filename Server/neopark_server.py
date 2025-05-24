@@ -138,6 +138,15 @@ def process_image_for_area(area_id, img_bytes):
                                     "area": area_id,
                                 }
                             )
+        print(
+            f"DEBUG: Final num_cars_in_frame for area {area_id} before set: {num_cars_in_frame}"
+        )  # DEBUG
+        if area_id == "A1":
+            print(f"DEBUG: Calling occupied_slots_a1.set({num_cars_in_frame})")  # DEBUG
+            occupied_slots_a1.set(num_cars_in_frame)
+        elif area_id == "A2":
+            print(f"DEBUG: Calling occupied_slots_a2.set({num_cars_in_frame})")  # DEBUG
+            occupied_slots_a2.set(num_cars_in_frame)
         if area_id == "A1":
             occupied_slots_a1.set(num_cars_in_frame)
         elif area_id == "A2":

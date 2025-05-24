@@ -131,20 +131,16 @@ def test_process_image_for_area_with_sample_image(
         app_instance, "mock_yolo_instance"
     ), "Mock YOLO instance tidak ditemukan di app_instance. Periksa conftest.py"
     mock_model = (
-        app_instance.mock_yolo_instance
-    )  # Pastikan ini adalah MOCK_YOLO_INSTANCE_FOR_TESTS dari conftest
+        app_instance.mock_yolo_instance_for_tests
+        if hasattr(app_instance, "mock_yolo_instance_for_tests")
+        else app_instance
+    )
 
     # Konfigurasi output dari mock_model
     mock_result_box = MagicMock()
 
     mock_first_box_coords_tensor_like = MagicMock()
-    mock_first_box_coords_tensor_like.tolist.return_value = [
-        10.0,
-        20.0,
-        30.0,
-        40.0,
-    ]  # Ini hasil dari .tolist()
-
+    mock_first_box_coords_tensor_like.tolist.return_value = [10.0, 20.0, 30.0, 40.0]
     mock_result_box.xyxy = [mock_first_box_coords_tensor_like]
 
     mock_result_box.conf = [0.95]
@@ -167,6 +163,21 @@ def test_process_image_for_area_with_sample_image(
 
     # Jalankan fungsi yang diuji
     result_dict = process_image_for_area("A1", image_bytes_from_file)
+    print("\n--- PyTest Debug Info ---")
+    print(f"result_dict: {result_dict}")
+    print(f"app_instance.prom_gauge_mock object ID: {id(app_instance.prom_gauge_mock)}")
+    # Untuk melihat objek gauge yang sebenarnya di modul neopark_server (setelah dimock)
+    from neopark_server import occupied_slots_a1 as actual_occupied_slots_a1_in_module
+
+    print(
+        f"occupied_slots_a1 in module object ID: {id(actual_occupied_slots_a1_in_module)}"
+    )
+    print(
+        f"Calls to app_instance.prom_gauge_mock.set: {app_instance.prom_gauge_mock.set.call_args_list}"
+    )
+    print("--- End PyTest Debug Info ---\n")
+
+    app_instance.prom_gauge_mock.set.assert_any_call(1)
 
     # Asersi
     assert result_dict["status"] == "Image processed"
