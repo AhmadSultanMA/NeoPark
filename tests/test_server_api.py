@@ -3,9 +3,6 @@ from unittest.mock import patch  # Hanya 'patch' yang dipakai
 import pytest  # Untuk parametrize
 from datetime import datetime
 
-# Menggunakan fixture clean_areas_data_fixture secara otomatis
-# Pastikan nama fixture ini ("clean_areas_data_fixture" atau "clean_areas_data")
-# sesuai dengan yang ada di conftest.py Anda.
 pytestmark = pytest.mark.usefixtures("clean_areas_data_fixture")
 
 
