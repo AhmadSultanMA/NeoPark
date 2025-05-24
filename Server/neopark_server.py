@@ -45,15 +45,12 @@ areas_data = {
 app = Flask(__name__)
 
 # --- Inisialisasi Prometheus Metrics ---
-# Ini akan otomatis menambahkan endpoint /metrics dan beberapa metrik HTTP dasar
-# serta metrik latensi dan jumlah request per endpoint.
-metrics = PrometheusMetrics(app, group_by="endpoint")
+metrics = PrometheusMetrics(app, group_by='endpoint')
 
 
 # --- Definisikan Metrik Custom untuk Prometheus ---
 
 # 1. Untuk Identifikasi Jam Sibuk (Okupansi per area)
-#    Kita akan menggunakan Gauge karena jumlah mobil bisa naik dan turun.
 occupied_slots_a1 = Gauge(
     "neopark_occupied_slots_area_a1", "Number of occupied parking slots in Area A1"
 )
@@ -62,8 +59,6 @@ occupied_slots_a2 = Gauge(
 )
 
 # 2. Untuk Confidence Score Model YOLO
-#    Histogram cocok untuk melihat distribusi confidence score.
-#    Kita tambahkan label 'area' untuk membedakan data dari A1 dan A2.
 yolo_confidence_scores = Histogram(
     "neopark_yolo_detection_confidence_score_histogram",
     "Histogram of YOLO detection confidence scores for detected cars",
@@ -72,7 +67,6 @@ yolo_confidence_scores = Histogram(
 )
 
 # 3. Opsional: Jumlah total deteksi mobil oleh YOLO (Counter)
-#    Counter hanya bisa bertambah nilainya.
 yolo_car_detections_total = Counter(
     "neopark_yolo_car_detections_total",
     "Total number of car detections by YOLO model",
@@ -108,42 +102,35 @@ def process_image_for_area(area_id, img_bytes):
                 for box in boxes:
                     class_id = int(box.cls[0])
                     class_name = model.names[class_id]
-                    if class_name == "car":
-                        num_cars_in_frame += (
-                            1  # Hitung semua mobil yang terdeteksi model
-                        )
+                    if class_name == 'car':
                         x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
                         conf = float(box.conf[0])
-
-                        # --- Update Metrik Prometheus untuk Confidence Score & Total Deteksi ---
-                        yolo_confidence_scores.labels(area=area_id).observe(conf)
-                        yolo_car_detections_total.labels(area=area_id).inc()
-
-                        draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
-                        label_text_area = f"Area {area_id}"
-                        label_text_car = f"Car: {conf:.2f}"
-                        try:
-                            font = ImageFont.truetype(
-                                "arial.ttf", 24
-                            )  # Ukuran font disesuaikan
-                            draw.text(
-                                (x1, y1 - 30), label_text_area, fill="blue", font=font
-                            )
-                            draw.text(
-                                (x1, y1 - 10), label_text_car, fill="red", font=font
-                            )
-                        except IOError:  # Fallback jika font tidak ditemukan
-                            draw.text((x1, y1 - 30), label_text_area, fill="blue")
-                            draw.text((x1, y1 - 10), label_text_car, fill="red")
-
-                        car_detections_list.append(
-                            {
+                        
+                        # Only process detections with confidence score above 80%
+                        if conf > 0.8:
+                            num_cars_in_frame += 1 # Hitung semua mobil yang terdeteksi model
+                            
+                            # --- Update Metrik Prometheus untuk Confidence Score & Total Deteksi ---
+                            yolo_confidence_scores.labels(area=area_id).observe(conf)
+                            yolo_car_detections_total.labels(area=area_id).inc()
+                            
+                            draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
+                            label_text_area = f"Area {area_id}"
+                            label_text_car = f"Car: {conf:.2f}"
+                            try:
+                                font = ImageFont.truetype("arial.ttf", 36) # Ukuran font disesuaikan
+                                draw.text((x1, y1-55), label_text_area, fill="blue", font=font)
+                                draw.text((x1, y1-35), label_text_car, fill="red", font=font)
+                            except IOError: # Fallback jika font tidak ditemukan
+                                draw.text((x1, y1-30), label_text_area, fill="blue")
+                                draw.text((x1, y1-10), label_text_car, fill="red")
+                            
+                            car_detections_list.append({
                                 "class": class_name,
                                 "confidence": conf,
                                 "bounding_box": [x1, y1, x2, y2],
-                                "area": area_id,
-                            }
-                        )
+                                "area": area_id
+                            })
 
         # --- Update Metrik Prometheus untuk Okupansi ---
         if area_id == "A1":
@@ -169,8 +156,6 @@ def process_image_for_area(area_id, img_bytes):
         }
 
     except Exception as e:
-        # Opsional: Anda bisa menambahkan metrik Counter untuk error pemrosesan
-        # processing_errors_total.labels(area=area_id).inc()
         logger.error(f"Error processing image for Area {area_id}: {str(e)}")
         raise e
 
