@@ -16,13 +16,9 @@ def mock_get_yolo_model_globally(request):
     patcher = patch(
         "neopark_server.get_yolo_model", return_value=MOCK_YOLO_INSTANCE_FOR_TESTS
     )
-
     patcher.start()
-
     request.config.MOCK_YOLO_FOR_TESTS = MOCK_YOLO_INSTANCE_FOR_TESTS
-
     yield
-
     patcher.stop()
 
 
@@ -62,23 +58,45 @@ def runner(app_instance):
     return app_instance.test_cli_runner()
 
 
+MOCK_GAUGE_INSTANCE = MagicMock(name="GlobalMockGaugeInstance")
+MOCK_HISTOGRAM_INSTANCE = MagicMock(name="GlobalMockHistogramInstance")
+MOCK_COUNTER_INSTANCE = MagicMock(name="GlobalMockCounterInstance")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_prometheus_primitives_globally(request):
+    patcher_gauge = patch("neopark_server.Gauge", return_value=MOCK_GAUGE_INSTANCE)
+    patcher_histogram = patch(
+        "neopark_server.Histogram", return_value=MOCK_HISTOGRAM_INSTANCE
+    )
+    patcher_counter = patch(
+        "neopark_server.Counter", return_value=MOCK_COUNTER_INSTANCE
+    )
+
+    patcher_gauge.start()
+    patcher_histogram.start()
+    patcher_counter.start()
+
+    request.config.MOCK_GAUGE_INSTANCE = MOCK_GAUGE_INSTANCE
+    request.config.MOCK_HISTOGRAM_INSTANCE = MOCK_HISTOGRAM_INSTANCE
+    request.config.MOCK_COUNTER_INSTANCE = MOCK_COUNTER_INSTANCE
+
+    yield
+
+    patcher_gauge.stop()
+    patcher_histogram.stop()
+    patcher_counter.stop()
+
+
 @pytest.fixture(autouse=True)
-def mock_prometheus_metrics_classes(app_instance, monkeypatch):
-    mock_gauge_instance = MagicMock()
-    monkeypatch.setattr(
-        "neopark_server.Gauge", MagicMock(return_value=mock_gauge_instance)
-    )
-    mock_histogram_instance = MagicMock()
-    monkeypatch.setattr(
-        "neopark_server.Histogram", MagicMock(return_value=mock_histogram_instance)
-    )
-    mock_counter_instance = MagicMock()
-    monkeypatch.setattr(
-        "neopark_server.Counter", MagicMock(return_value=mock_counter_instance)
-    )
-    app_instance.prom_gauge_mock = mock_gauge_instance
-    app_instance.prom_histogram_mock = mock_histogram_instance
-    app_instance.prom_counter_mock = mock_counter_instance
+def setup_prometheus_mocks_on_app(app_instance, mock_prometheus_primitives_globally):
+    app_instance.prom_gauge_mock = MOCK_GAUGE_INSTANCE
+    app_instance.prom_histogram_mock = MOCK_HISTOGRAM_INSTANCE
+    app_instance.prom_counter_mock = MOCK_COUNTER_INSTANCE
+
+    MOCK_GAUGE_INSTANCE.reset_mock()
+    MOCK_HISTOGRAM_INSTANCE.reset_mock()
+    MOCK_COUNTER_INSTANCE.reset_mock()
 
 
 @pytest.fixture

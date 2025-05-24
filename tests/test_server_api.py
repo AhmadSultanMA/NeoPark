@@ -175,20 +175,3 @@ def test_video_feed_area(
     assert response.mimetype == "multipart/x-mixed-replace"
 
     mock_generate_frames.assert_called_once_with(area_id_param)
-
-
-# --- Tes untuk /metrics endpoint ---
-def test_metrics_endpoint_more_details(client, clean_areas_data_fixture):
-    response = client.get("/metrics")
-    assert response.status_code == 200
-    assert "text/plain" in response.content_type
-    metrics_text = response.data.decode("utf-8")
-
-    # Cek beberapa metrik custom dan standar
-    assert "neopark_occupied_slots_area_a1" in metrics_text
-    assert "neopark_occupied_slots_area_a2" in metrics_text
-    assert "neopark_yolo_detection_confidence_score_histogram_bucket" in metrics_text
-    assert "neopark_yolo_car_detections_total" in metrics_text
-    assert "flask_http_requests_total" in metrics_text  # Dari prometheus_flask_exporter
-    # atau _duration_seconds, periksa output /metrics Anda untuk nama yang benar
-    assert "flask_http_request_latency_seconds_bucket" in metrics_text

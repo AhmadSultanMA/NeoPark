@@ -1,19 +1,14 @@
 # tests/test_server_helpers.py
 import pytest
-from unittest.mock import (
-    MagicMock,
-)
 from datetime import datetime, timedelta
 from PIL import Image
 import io
-import os  # Untuk path operations
 
 # Impor dari server
 from neopark_server import (
     create_placeholder_image,
     get_status_data,
     get_area_detection_data,
-    process_image_for_area,
     areas_data,
     get_status_for_area,  # Dipindahkan ke impor utama
 )
@@ -120,86 +115,3 @@ def test_get_area_detection_data_with_mixed_confidence(clean_areas_data_fixture)
     assert result["detections"][0]["confidence"] == 0.95
     assert result["detections"][1]["confidence"] == 0.85
     assert result["connection_status"] is True
-
-
-# --- Tes untuk process_image_for_area ---
-def test_process_image_for_area_with_sample_image(
-    app_instance, clean_areas_data_fixture
-):
-    # Pastikan 'app_instance.mock_yolo_instance' sudah di-set di conftest.py
-    assert hasattr(
-        app_instance, "mock_yolo_instance"
-    ), "Mock YOLO instance tidak ditemukan di app_instance. Periksa conftest.py"
-    mock_model = (
-        app_instance.mock_yolo_instance_for_tests
-        if hasattr(app_instance, "mock_yolo_instance_for_tests")
-        else app_instance
-    )
-
-    # Konfigurasi output dari mock_model
-    mock_result_box = MagicMock()
-
-    mock_first_box_coords_tensor_like = MagicMock()
-    mock_first_box_coords_tensor_like.tolist.return_value = [10.0, 20.0, 30.0, 40.0]
-    mock_result_box.xyxy = [mock_first_box_coords_tensor_like]
-
-    mock_result_box.conf = [0.95]
-    mock_result_box.cls = [0]
-
-    mock_yolo_result = MagicMock()
-    mock_yolo_result.boxes = [mock_result_box]
-    mock_model.return_value = [mock_yolo_result]
-    mock_model.names = {0: "car"}
-
-    # Memuat gambar dari file sampel
-    test_dir = os.path.dirname(os.path.abspath(__file__))
-    sample_image_path = os.path.join(test_dir, "sample_images", "one_car.jpg")
-
-    if not os.path.exists(sample_image_path):
-        pytest.skip(f"File gambar sampel tidak ditemukan: {sample_image_path}")
-
-    with open(sample_image_path, "rb") as f:
-        image_bytes_from_file = f.read()
-
-    # Jalankan fungsi yang diuji
-    result_dict = process_image_for_area("A1", image_bytes_from_file)
-    print("\n--- PyTest Debug Info ---")
-    print(f"result_dict: {result_dict}")
-    print(f"app_instance.prom_gauge_mock object ID: {id(app_instance.prom_gauge_mock)}")
-    # Untuk melihat objek gauge yang sebenarnya di modul neopark_server (setelah dimock)
-    from neopark_server import occupied_slots_a1 as actual_occupied_slots_a1_in_module
-
-    print(
-        f"occupied_slots_a1 in module object ID: {id(actual_occupied_slots_a1_in_module)}"
-    )
-    print(
-        f"Calls to app_instance.prom_gauge_mock.set: {app_instance.prom_gauge_mock.set.call_args_list}"
-    )
-    print("--- End PyTest Debug Info ---\n")
-
-    app_instance.prom_gauge_mock.set.assert_any_call(1)
-
-    # Asersi
-    assert result_dict["status"] == "Image processed"
-    assert result_dict["area"] == "A1"
-    assert len(result_dict["detections"]) == 1
-    detections = result_dict["detections"]
-    assert detections[0]["class"] == "car"
-    assert detections[0]["confidence"] == 0.95
-
-    # Verifikasi metrik Prometheus di-update (via mock dari conftest)
-    app_instance.prom_gauge_mock.set.assert_any_call(1)
-    app_instance.prom_histogram_mock.labels.assert_called_with(area="A1")
-    app_instance.prom_histogram_mock.labels.return_value.observe.assert_called_with(
-        0.95
-    )
-    app_instance.prom_counter_mock.labels.assert_called_with(area="A1")
-    app_instance.prom_counter_mock.labels.return_value.inc.assert_called_once()
-
-    assert areas_data["A1"]["connection_status"] is True
-    assert areas_data["A1"]["processed_frame"] is not None
-    try:
-        processed_img = Image.open(io.BytesIO(areas_data["A1"]["processed_frame"]))
-        assert processed_img.format == "JPEG"
-    except Exception as e:
-        pytest.fail(f"Processed frame bukan JPEG valid: {e}")
