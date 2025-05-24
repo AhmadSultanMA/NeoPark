@@ -1,47 +1,99 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  neopark-server:
-    build: .
-    container_name: neopark-parking-system
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./Server:/app/server
-      - ./Website:/app/static
-      - ./logs:/app/logs
-    environment:
-      - PYTHONUNBUFFERED=1
-      - FLASK_ENV=production
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/combined/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    networks:
-      - neopark-network
+    neopark-server:
+        build: . # Menggunakan Dockerfile di root
+        container_name: neopark-parking-system
+        ports:
+            - "5000:5000"
+        volumes:
+            # Mount fine-best.pt jika tidak di-COPY dalam Dockerfile atau untuk kemudahan update
+            # Jika Server/fine-best.pt di-COPY oleh Dockerfile, volume ini bisa di-skip
+            # - ./Server/fine-best.pt:/app/fine-best.pt:ro
+            - ./logs:/app/logs # Untuk log aplikasi Flask jika Anda mengarahkannya ke file
+        environment:
+            - PYTHONUNBUFFERED=1
+            - FLASK_ENV=production
+            # FLASK_APP sudah diatur di Dockerfile
+        restart: unless-stopped
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "wget",
+                    "--no-verbose",
+                    "--tries=1",
+                    "--spider",
+                    "http://localhost:5000/combined/status",
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 60s
+        networks:
+            - neopark-network
 
-  nginx:
-    image: nginx:alpine
-    container_name: neopark-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./static:/usr/share/nginx/html/static
-    depends_on:
-      - neopark-server
-    restart: unless-stopped
-    networks:
-      - neopark-network
+    nginx: # Jika Anda tetap ingin menggunakan Nginx
+        image: nginx:alpine
+        container_name: neopark-nginx
+        ports:
+            - "80:80"
+            # - "443:443" # Jika ada SSL
+        volumes:
+            - ./nginx.conf:/etc/nginx/nginx.conf:ro
+            - ./Website:/usr/share/nginx/html/website # Nginx menyajikan dashboard dari sini
+        depends_on:
+            - neopark-server
+        restart: unless-stopped
+        networks:
+            - neopark-network
+
+    prometheus:
+        image: prom/prometheus:v2.51.0 # Gunakan versi stabil
+        container_name: neopark-prometheus
+        ports:
+            - "9090:9090"
+        volumes:
+            - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro # File konfigurasi Prometheus
+            - prometheus_data:/prometheus # Volume untuk menyimpan data metrik
+        command:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+            - "--web.console.templates=/usr/share/prometheus/consoles"
+            - "--web.enable-lifecycle" # Memungkinkan reload config via HTTP POST
+        restart: unless-stopped
+        depends_on:
+            - neopark-server
+        networks:
+            - neopark-network
+
+    grafana:
+        image: grafana/grafana:10.4.2 # Gunakan versi stabil
+        container_name: neopark-grafana
+        ports:
+            - "3000:3000"
+        volumes:
+            - grafana_data:/var/lib/grafana # Volume untuk menyimpan dashboard dan konfigurasi Grafana
+            # Anda bisa mount file provisioning untuk data source dan dashboard di sini
+            # - ./grafana/provisioning/:/etc/grafana/provisioning/
+        environment:
+            - GF_SECURITY_ADMIN_USER=admin
+            - GF_SECURITY_ADMIN_PASSWORD=admin # Ganti dengan password yang kuat untuk produksi
+            - GF_USERS_ALLOW_SIGN_UP=false
+            # - GF_SERVER_ROOT_URL=http://localhost:3000 # Sesuaikan jika diakses via domain
+        restart: unless-stopped
+        depends_on:
+            - prometheus
+        networks:
+            - neopark-network
 
 networks:
-  neopark-network:
-    driver: bridge
+    neopark-network:
+        driver: bridge
 
 volumes:
-  logs:
-  data:
+    logs: # Sudah ada
+    prometheus_data: {}
+    grafana_data: {}
+    # data: # Volume 'data' Anda sepertinya tidak terpakai, bisa dihapus jika tidak ada gunanya

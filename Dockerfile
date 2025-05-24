@@ -4,6 +4,10 @@ FROM python:3.9-slim
 # Set working directory
 WORKDIR /app
 
+# Modify sources.list to include contrib and non-free
+RUN sed -i 's/main/main contrib non-free/g' /etc/apt/sources.list.d/debian.sources \
+    || sed -i 's/main/main contrib non-free/g' /etc/apt/sources.list
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx \
@@ -12,35 +16,23 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgomp1 \
-    libgtk-3-0 \
-    libavcodec-dev \
-    libavformat-dev \
-    libswscale-dev \
-    libv4l-dev \
-    libxvidcore-dev \
-    libx264-dev \
-    libjpeg-dev \
-    libpng-dev \
-    libtiff-dev \
-    libatlas-base-dev \
-    python3-dev \
     wget \
-    && rm -rf /var/lib/apt/lists/*
+    # Pastikan Anda menerima EULA untuk mscorefonts
+    && echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections \
+    && apt-get install -y --no-install-recommends ttf-mscorefonts-installer \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file
+# Copy requirements file from the root of the build context
 COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create directories for application
-RUN mkdir -p /app/static
+# Copy Server files (termasuk neopark_server.py dan fine-best.pt)
+COPY Server/ /app/
 
-# Copy Server files
-COPY Server/ .
-
-# Copy Website files
-COPY Website/ ./static/
+# Copy Website files to /app/static (jika Nginx tidak dipakai untuk static files)
+COPY Website/ /app/static/
 
 # Expose port
 EXPOSE 5000
@@ -54,7 +46,7 @@ ENV FLASK_ENV=production
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Health check
+# Health check (sudah ada dan baik)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5000/combined/status || exit 1
 
