@@ -1,0 +1,21 @@
+name: Deploy to Vercel on Specific Commit
+
+on:
+  push:
+    branches:
+      - main  # Ganti sesuai branch kamu
+
+jobs:
+  deploy:
+    if: "contains(github.event.head_commit.message, 'DEPLOY WEB')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel --prod --confirm
