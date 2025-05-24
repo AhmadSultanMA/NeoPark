@@ -45,7 +45,7 @@ areas_data = {
 app = Flask(__name__)
 
 # --- Inisialisasi Prometheus Metrics ---
-metrics = PrometheusMetrics(app, group_by='endpoint')
+metrics = PrometheusMetrics(app, group_by="endpoint")
 
 
 # --- Definisikan Metrik Custom untuk Prometheus ---
@@ -102,35 +102,48 @@ def process_image_for_area(area_id, img_bytes):
                 for box in boxes:
                     class_id = int(box.cls[0])
                     class_name = model.names[class_id]
-                    if class_name == 'car':
+                    if class_name == "car":
                         x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
                         conf = float(box.conf[0])
-                        
+
                         # Only process detections with confidence score above 80%
                         if conf > 0.8:
-                            num_cars_in_frame += 1 # Hitung semua mobil yang terdeteksi model
-                            
+                            num_cars_in_frame += (
+                                1  # Hitung semua mobil yang terdeteksi model
+                            )
+
                             # --- Update Metrik Prometheus untuk Confidence Score & Total Deteksi ---
                             yolo_confidence_scores.labels(area=area_id).observe(conf)
                             yolo_car_detections_total.labels(area=area_id).inc()
-                            
+
                             draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
                             label_text_area = f"Area {area_id}"
                             label_text_car = f"Car: {conf:.2f}"
                             try:
-                                font = ImageFont.truetype("arial.ttf", 36) # Ukuran font disesuaikan
-                                draw.text((x1, y1-55), label_text_area, fill="blue", font=font)
-                                draw.text((x1, y1-35), label_text_car, fill="red", font=font)
-                            except IOError: # Fallback jika font tidak ditemukan
-                                draw.text((x1, y1-30), label_text_area, fill="blue")
-                                draw.text((x1, y1-10), label_text_car, fill="red")
-                            
-                            car_detections_list.append({
-                                "class": class_name,
-                                "confidence": conf,
-                                "bounding_box": [x1, y1, x2, y2],
-                                "area": area_id
-                            })
+                                font = ImageFont.truetype(
+                                    "arial.ttf", 36
+                                )  # Ukuran font disesuaikan
+                                draw.text(
+                                    (x1, y1 - 55),
+                                    label_text_area,
+                                    fill="blue",
+                                    font=font,
+                                )
+                                draw.text(
+                                    (x1, y1 - 35), label_text_car, fill="red", font=font
+                                )
+                            except IOError:  # Fallback jika font tidak ditemukan
+                                draw.text((x1, y1 - 30), label_text_area, fill="blue")
+                                draw.text((x1, y1 - 10), label_text_car, fill="red")
+
+                            car_detections_list.append(
+                                {
+                                    "class": class_name,
+                                    "confidence": conf,
+                                    "bounding_box": [x1, y1, x2, y2],
+                                    "area": area_id,
+                                }
+                            )
 
         # --- Update Metrik Prometheus untuk Okupansi ---
         if area_id == "A1":
