@@ -1,0 +1,48 @@
+name: NeoPark Server CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    build_lint_and_test: # Ganti nama job jika mau
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                python-version: ["3.9"]
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ matrix.python-version }}
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install flake8 pytest # Pastikan pytest terinstal
+                  if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+            - name: Lint with flake8
+              run: |
+                  # flake8 akan otomatis mencari file .flake8 di root
+                  flake8 Server/ tests/
+
+            - name: Run tests with pytest
+              run: |
+                  # Jalankan pytest dari root direktori proyek
+                  # Pytest akan otomatis menemukan direktori tests/
+                  # Tambahkan --cov=Server --cov-report=xml jika ingin laporan coverage
+                  pytest -v tests/
+
+            - name: (Optional) Build Docker image
+              # Jika tes berhasil, coba build Docker image
+              if: success() # Hanya berjalan jika langkah sebelumnya (tes) berhasil
+              run: |
+                  docker build . --file Dockerfile --tag neopark-server-ci:$(date +%s)
