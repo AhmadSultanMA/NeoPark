@@ -3,28 +3,28 @@ import sys
 import os
 from unittest.mock import MagicMock, patch
 
-MOCK_YOLO_INSTANCE_GLOBAL = MagicMock()
-MOCK_YOLO_INSTANCE_GLOBAL.names = {0: "car", 1: "person"}
-
-
-@pytest.fixture(scope="session", autouse=True)
-def mock_yolo_globally_after_dummy_load(request):
-    patcher_ultralytics = patch(
-        "ultralytics.YOLO", return_value=MOCK_YOLO_INSTANCE_GLOBAL
-    )
-
-    patcher_ultralytics.start()
-
-    request.config.MOCK_YOLO_INSTANCE_GLOBAL = MOCK_YOLO_INSTANCE_GLOBAL
-
-    yield
-
-    patcher_ultralytics.stop()
-
-
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../Server"))
 )
+
+MOCK_YOLO_INSTANCE_FOR_TESTS = MagicMock()
+MOCK_YOLO_INSTANCE_FOR_TESTS.names = {0: "car", 1: "person"}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_get_yolo_model_globally(request):
+    patcher = patch(
+        "neopark_server.get_yolo_model", return_value=MOCK_YOLO_INSTANCE_FOR_TESTS
+    )
+
+    patcher.start()
+
+    request.config.MOCK_YOLO_FOR_TESTS = MOCK_YOLO_INSTANCE_FOR_TESTS
+
+    yield
+
+    patcher.stop()
+
 
 _flask_app_global_cache = None
 
@@ -35,12 +35,12 @@ def get_flask_app_instance_val():
         from neopark_server import app as actual_flask_app
 
         _flask_app_global_cache = actual_flask_app
-        _flask_app_global_cache.mock_yolo_instance = MOCK_YOLO_INSTANCE_GLOBAL
+        _flask_app_global_cache.mock_yolo_instance = MOCK_YOLO_INSTANCE_FOR_TESTS
     return _flask_app_global_cache
 
 
 @pytest.fixture(scope="session")
-def app_instance(mock_yolo_globally_after_dummy_load):
+def app_instance(mock_get_yolo_model_globally):
     flask_app = get_flask_app_instance_val()
     flask_app.config.update(
         {
