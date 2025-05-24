@@ -1,9 +1,12 @@
 global:
-    scrape_interval: 15s # Seberapa sering mengambil data dari target
-    evaluation_interval: 15s
+  scrape_interval: 15s # Seberapa sering mengambil data dari target
+  evaluation_interval: 15s
 
 scrape_configs:
-    - job_name: "neopark_server"
-      # metrics_path defaultnya /metrics, jadi tidak perlu dispesifikasi jika endpoint Flask Anda /metrics
-      static_configs:
-          - targets: ["neopark-server:5000"] # Nama service dan port internal Docker
+  - job_name: "neopark_server"
+    # Gunakan nama service Docker sebagai hostname
+    static_configs:
+      - targets: ["neopark-server:5000"] # Menggunakan nama service Docker, bukan localhost
+    metrics_path: "/metrics" # Pastikan endpoint metrics tersedia
+    scrape_interval: 15s
+    scrape_timeout: 10s

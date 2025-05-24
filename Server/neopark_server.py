@@ -377,24 +377,6 @@ def generate_frames_for_area(area_id):
                        b'Content-Type: image/jpeg\r\n\r\n' + placeholder + b'\r\n')
         time.sleep(0.06) # FPS disesuaikan
 
-
-def generate_raw_frames_for_area(area_id):
-    """Generate raw video frames for specific area"""
-    # ... (fungsi ini sudah benar)
-    area_data = areas_data[area_id]
-    
-    while True:
-        with area_data['frame_lock']:
-            if area_data['latest_frame'] is not None:
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + area_data['latest_frame'] + b'\r\n')
-            else:
-                placeholder = create_placeholder_image(area_id)
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + placeholder + b'\r\n')
-        time.sleep(0.1)
-
-
 def create_placeholder_image(area_id):
     """Create a placeholder image when camera is not connected"""
     # ... (fungsi ini sudah benar)
@@ -425,6 +407,43 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
     return response
+
+# Health check endpoint khusus untuk Docker health check
+@app.route('/health', methods=['GET'])
+@metrics.do_not_track()
+def health_check():
+    """Health check endpoint untuk Docker dan monitoring"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'service': 'neopark-server',
+        'areas': {
+            'A1': {
+                'connection_status': areas_data['A1']['connection_status'],
+                'has_frame': areas_data['A1']['latest_frame'] is not None
+            },
+            'A2': {
+                'connection_status': areas_data['A2']['connection_status'],
+                'has_frame': areas_data['A2']['latest_frame'] is not None
+            }
+        }
+    }), 200
+
+# Custom metrics endpoint (opsional, jika ingin endpoint terpisah)
+@app.route('/custom_metrics', methods=['GET'])
+@metrics.do_not_track()
+def custom_metrics_info():
+    """Endpoint untuk melihat informasi custom metrics"""
+    return jsonify({
+        'available_metrics': [
+            'neopark_occupied_slots_area_a1',
+            'neopark_occupied_slots_area_a2', 
+            'neopark_yolo_detection_confidence_score_histogram',
+            'neopark_yolo_car_detections_total'
+        ],
+        'metrics_endpoint': '/metrics',
+        'note': 'Access /metrics endpoint for Prometheus scraping'
+    }), 200
 
 if __name__ == '__main__':
     # Endpoint /metrics akan otomatis tersedia oleh PrometheusMetrics
