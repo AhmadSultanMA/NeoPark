@@ -13,7 +13,7 @@ def mock_yolo_globally_after_dummy_load(request):
         "ultralytics.YOLO", return_value=MOCK_YOLO_INSTANCE_GLOBAL
     )
 
-    mock_active_ultralytics_yolo = patcher_ultralytics.start()
+    patcher_ultralytics.start()
 
     request.config.MOCK_YOLO_INSTANCE_GLOBAL = MOCK_YOLO_INSTANCE_GLOBAL
 
