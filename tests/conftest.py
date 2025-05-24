@@ -8,92 +8,80 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../Server')))
 
 # Tunda import app sampai sys.path di-set dan mock bisa diaplikasikan
-_flask_app = None
+_flask_app_global_cache = None
+_mock_yolo_instance_for_tests_cache = None # Variabel global untuk menyimpan mock instance
 
-def get_flask_app():
-    global _flask_app
-    if _flask_app is None:
+def get_flask_app_with_mocks():
+    global _flask_app_global_cache, _mock_yolo_instance_for_tests_cache
+    
+    if _flask_app_global_cache is None:
+        # Buat instance mock untuk YOLO
         mock_yolo_instance = MagicMock()
 
-        with patch('ultralytics.YOLO', return_value=mock_yolo_instance) as mock_yolo_class_ultralytics, \
-             patch('neopark_server.YOLO', return_value=mock_yolo_instance, create=True) as mock_yolo_class_server:
-            # 'create=True' untuk neopark_server.YOLO jika YOLO diimpor dan diassign di sana
+        _mock_yolo_instance_for_tests_cache = mock_yolo_instance
+
+        with patch('ultralytics.YOLO', return_value=mock_yolo_instance) as _mock_ultralytics_yolo, \
+             patch('neopark_server.YOLO', return_value=mock_yolo_instance, create=True) as _mock_neopark_server_yolo:
             
-            # Simpan mock class untuk digunakan di tes jika perlu
-            get_flask_app.mock_yolo_class_ultralytics = mock_yolo_class_ultralytics
-            get_flask_app.mock_yolo_class_server = mock_yolo_class_server
-            get_flask_app.mock_yolo_instance = mock_yolo_instance
-
+            # Sekarang aman untuk mengimpor modul aplikasi
             from neopark_server import app as actual_flask_app
-            _flask_app = actual_flask_app
-    return _flask_app
+            _flask_app_global_cache = actual_flask_app
+
+            _flask_app_global_cache.mock_yolo_instance = _mock_yolo_instance_for_tests_cache
+            
+    return _flask_app_global_cache
 
 
-@pytest.fixture(scope='session') # Scope session agar mock YOLO konsisten
+@pytest.fixture(scope='session')
 def app_instance():
-    """Fixture untuk instance aplikasi Flask dengan YOLO di-mock."""
-    flask_app = get_flask_app()
+    """Fixture untuk instance aplikasi Flask (session-scoped) dengan YOLO sudah di-mock."""
+    flask_app = get_flask_app_with_mocks()
     flask_app.config.update({
         "TESTING": True,
-        # Nonaktifkan logging Prometheus saat testing agar tidak pollute output / error jika endpoint tidak siap
-        "PROMETHEUS_ENABLE_MIDDLEWARE": False,
+        "PROMETHEUS_ENABLE_MIDDLEWARE": False, # Jika Anda menggunakan setting ini di app Anda
     })
-    yield flask_app
+    yield flask_app # Menyediakan app instance ke tes
 
 @pytest.fixture
-def client(app_instance):
+def client(app_instance): # Scope default adalah 'function'
     """Fixture untuk Flask test client."""
-    with app_instance.test_client() as client:
-        yield client
+    with app_instance.test_client() as test_client:
+        yield test_client
 
 @pytest.fixture
-def runner(app_instance):
-    """Fixture untuk Flask CLI runner."""
+def runner(app_instance): # Scope default adalah 'function'
+    """Fixture untuk Flask CLI runner (jika Anda punya custom CLI commands)."""
     return app_instance.test_cli_runner()
 
 @pytest.fixture(autouse=True) # autouse=True agar fixture ini otomatis dipakai di setiap tes
-def mock_prom_metrics_on_app(app_instance, monkeypatch):
-    """
-    Monkeypatch Prometheus metrics Gauges and Histograms
-    untuk menghindari state antar tes dan error jika metrik sudah terdaftar.
-    Ini juga mencegah panggilan .observe() atau .set() sungguhan ke Prometheus client.
-    """
-    # Mock Gauge
+def mock_prometheus_metrics_classes(app_instance, monkeypatch):
     mock_gauge_instance = MagicMock()
     monkeypatch.setattr('neopark_server.Gauge', MagicMock(return_value=mock_gauge_instance))
     
-    # Mock Histogram
     mock_histogram_instance = MagicMock()
     # mock_histogram_instance.labels.return_value.observe = MagicMock() # Jika perlu lebih spesifik
     monkeypatch.setattr('neopark_server.Histogram', MagicMock(return_value=mock_histogram_instance))
 
-    # Mock Counter
     mock_counter_instance = MagicMock()
     monkeypatch.setattr('neopark_server.Counter', MagicMock(return_value=mock_counter_instance))
     
-    # Simpan mock untuk bisa diakses di tes jika perlu
+    # Lampirkan instance mock metrik ke app_instance agar bisa diakses/diverifikasi dalam tes
     app_instance.prom_gauge_mock = mock_gauge_instance
     app_instance.prom_histogram_mock = mock_histogram_instance
     app_instance.prom_counter_mock = mock_counter_instance
 
 
-@pytest.fixture
-def clean_areas_data(app_instance):
-    """Fixture untuk membersihkan/mereset areas_data sebelum setiap tes."""
-    # Impor areas_data dari modul aplikasi yang sudah di-patch
+@pytest.fixture # Scope default adalah 'function', cocok untuk state yang direset per tes
+def clean_areas_data_fixture(app_instance): # Nama diubah sedikit untuk kejelasan
     from neopark_server import areas_data
-    
-    original_areas_data = {
-        area: data.copy() for area, data in areas_data.items()
-    }
-    
-    # Reset ke state awal yang diketahui
-    for area_id in areas_data:
-        areas_data[area_id]['latest_detection'] = {}
-        areas_data[area_id]['latest_frame'] = None
-        areas_data[area_id]['processed_frame'] = None
-        areas_data[area_id]['last_frame_time'] = None
-        areas_data[area_id]['connection_status'] = False
-        # Jangan reset 'frame_lock' karena itu objek threading.Lock
+        
+    # Reset ke state awal yang diketahui untuk setiap area
+    for area_id_key in list(areas_data.keys()): # list() untuk menghindari error size change saat iterasi jika ada modifikasi
+        areas_data[area_id_key]['latest_detection'] = {}
+        areas_data[area_id_key]['latest_frame'] = None
+        areas_data[area_id_key]['processed_frame'] = None
+        areas_data[area_id_key]['last_frame_time'] = None
+        areas_data[area_id_key]['connection_status'] = False
+        # Objek 'frame_lock' (threading.Lock) tidak perlu dibuat ulang, biarkan saja.
 
-    yield areas_data # Berikan areas_data yang bersih ke tes
+    yield areas_data # Menyediakan 'areas_data' yang sudah bersih ke fungsi tes
