@@ -99,7 +99,6 @@ git clone https://github.com/AhmadSultanMA/NeoPark.git
 cd NeoPark
 ```
 
-````
 
 #### 2. Konfigurasi Perangkat IoT (ESP32-CAM)
 
@@ -181,4 +180,4 @@ NeoPark/
 -   Pengembangan fitur reservasi dan pembayaran parkir.
 -   Implementasi model prediksi untuk memperkirakan ketersediaan parkir di masa depan.
 -   Optimasi model AI untuk dijalankan pada perangkat edge dengan sumber daya terbatas.
-````
+
