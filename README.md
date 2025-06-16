@@ -1,4 +1,4 @@
-## 🚗 Neopark - Sistem Manajemen Parkir Pintar Berbasis AI
+# 🚗 Neopark - Sistem Manajemen Parkir Pintar Berbasis AI
 
 Neopark adalah prototipe sistem manajemen parkir pintar yang memanfaatkan Kecerdasan Buatan (AI) untuk deteksi objek dan Internet of Things (IoT) untuk pemantauan secara real-time. Proyek ini dirancang untuk memberikan informasi ketersediaan slot parkir secara akurat dan efisien melalui sebuah dashboard web interaktif.
 
